@@ -113,4 +113,10 @@
     <Watch Include="**/*.scss" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Common">
+      <HintPath>..\..\..\..\Common\Common\bin\Debug\net6.0\Common.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

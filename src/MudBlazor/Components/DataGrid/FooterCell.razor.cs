@@ -5,17 +5,18 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Common.Types;
 using Microsoft.AspNetCore.Components;
 using MudBlazor.Utilities;
 
 namespace MudBlazor
 {
-    public partial class FooterCell<T> : MudComponentBase
+    public partial class FooterCell<T, TViewModel> : MudComponentBase where T : IIdentifiable<int> where TViewModel : IIdentifiable<int>
     {
-        [CascadingParameter] public MudDataGrid<T> DataGrid { get; set; }
+        [CascadingParameter] public MudDataGrid<T, TViewModel> DataGrid { get; set; }
         //[CascadingParameter(Name = "IsOnlyFooter")] public bool IsOnlyFooter { get; set; } = false;
 
-        [Parameter] public Column<T> Column { get; set; }
+        [Parameter] public Column<T, TViewModel> Column { get; set; }
         //[Parameter] public int ColSpan { get; set; }
         //[Parameter] public ColumnType ColumnType { get; set; } = ColumnType.Text;
         //[Parameter] public RenderFragment<IEnumerable<T>> FooterTemplate { get; set; }

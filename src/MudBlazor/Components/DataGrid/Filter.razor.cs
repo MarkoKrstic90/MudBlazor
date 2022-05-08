@@ -8,12 +8,13 @@ using System.Linq.Expressions;
 using System.Numerics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
+using Common.Types;
 
 namespace MudBlazor
 {
-    public partial class Filter<T>
+    public partial class Filter<T, TViewModel> where T : IIdentifiable<int> where TViewModel : IIdentifiable<int>
     {
-        [CascadingParameter] public MudDataGrid<T> DataGrid { get; set; }
+        [CascadingParameter] public MudDataGrid<T, TViewModel> DataGrid { get; set; }
 
         [Parameter] public Guid Id { get; set; }
         [Parameter] public string Field { get; set; }

@@ -7,17 +7,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Common.Types;
 using Microsoft.AspNetCore.Components;
 using MudBlazor.Utilities;
 
 namespace MudBlazor
 {
-    public partial class HeaderCell<T> : MudComponentBase, IDisposable
+    public partial class HeaderCell<T, TViewModel> : MudComponentBase, IDisposable where T : IIdentifiable<int> where TViewModel : IIdentifiable<int>
     {
-        [CascadingParameter] public MudDataGrid<T> DataGrid { get; set; }
+        [CascadingParameter] public MudDataGrid<T, TViewModel> DataGrid { get; set; }
         [CascadingParameter(Name = "IsOnlyHeader")] public bool IsOnlyHeader { get; set; } = false;
 
-        [Parameter] public Column<T> Column { get; set; }
+        [Parameter] public Column<T, TViewModel> Column { get; set; }
         [Parameter] public RenderFragment ChildContent { get; set; }
 
         private SortDirection _initialDirection;
@@ -132,7 +133,7 @@ namespace MudBlazor
 
         internal void GetDataType()
         {
-            var p = typeof(T).GetProperty(Column?.Field);
+            var p = typeof(TViewModel).GetProperty(Column?.Field);
             _dataType = p.GetType();
         }
 
@@ -155,7 +156,7 @@ namespace MudBlazor
             StateHasChanged();
         }
 
-        private void OnSelectedItemsChanged(HashSet<T> items)
+        private void OnSelectedItemsChanged(HashSet<IIdentifiable<int>> items)
         {
             _isSelected = items.Count == DataGrid.GetFilteredItemsCount();
             StateHasChanged();

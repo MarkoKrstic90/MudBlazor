@@ -8,19 +8,21 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Common.Types;
 using MudBlazor.Utilities;
 
 namespace MudBlazor
 {
-    internal class Cell<T>
+    internal class Cell<T, TViewModel> where T : IIdentifiable<int> where TViewModel : IIdentifiable<int>
     {
-        private readonly MudDataGrid<T> _dataGrid;
-        private readonly Column<T> _column;
-        internal T _item;
+        private readonly MudDataGrid<T, TViewModel> _dataGrid;
+        private readonly Column<T, TViewModel> _column;
+        internal TViewModel _item;
+        internal T _editItem;
         internal string valueString;
         internal double valueNumber;
         internal bool isEditing;
-        internal CellContext<T> cellContext;
+        internal CellContext<IIdentifiable<int>> cellContext;
 
         #region Computed Properties
 
@@ -60,7 +62,7 @@ namespace MudBlazor
 
         #endregion
 
-        public Cell(MudDataGrid<T> dataGrid, Column<T> column, T item)
+        public Cell(MudDataGrid<T, TViewModel> dataGrid, Column<T, TViewModel> column, TViewModel item)
         {
             _dataGrid = dataGrid;
             _column = column;
@@ -69,14 +71,36 @@ namespace MudBlazor
             OnStartedEditingItem();
 
             // Create the CellContext
-            cellContext = new CellContext<T>
+            cellContext = new CellContext<IIdentifiable<int>>
             {
                 selection = _dataGrid.Selection,
                 Item = _item,
-                Actions = new CellContext<T>.CellActions
+                Actions = new CellContext<IIdentifiable<int>>.CellActions
                 {
                     SetSelectedItem = async (x) => await _dataGrid.SetSelectedItemAsync(x, _item),
                     StartEditingItem = async () => await _dataGrid.SetEditingItemAsync(_item),
+                    CancelEditingItem = async () => await _dataGrid.CancelEditingItemAsync(),
+                }
+            };
+        }
+
+        public Cell(MudDataGrid<T, TViewModel> dataGrid, Column<T, TViewModel> column, T item)
+        {
+            _dataGrid = dataGrid;
+            _column = column;
+            _editItem = item;
+
+            OnStartedEditingItem();
+
+            // Create the CellContext
+            cellContext = new CellContext<IIdentifiable<int>>
+            {
+                selection = _dataGrid.Selection,
+                Item = _editItem,
+                Actions = new CellContext<IIdentifiable<int>>.CellActions
+                {
+                    SetSelectedItem = async (x) => await _dataGrid.SetSelectedItemAsync(x, _editItem),
+                    StartEditingItem = async () => await _dataGrid.SetEditingItemAsync(_editItem),
                     CancelEditingItem = async () => await _dataGrid.CancelEditingItemAsync(),
                 }
             };

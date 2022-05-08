@@ -3,31 +3,32 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using MudBlazor.Utilities;
+using Common.Types;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace MudBlazor
 {
-    public partial class MudDataGrid<T> : MudComponentBase
+    public partial class MudDataGrid<T, TViewModel> : MudComponentBase where T: IIdentifiable<int> where TViewModel : IIdentifiable<int>
     {
         private int _currentPage = 0;
         private int? _rowsPerPage;
         private bool _isFirstRendered = false;
         private bool _filtersMenuVisible = false;
         private bool _columnsPanelVisible = false;
-        private IEnumerable<T> _items;
-        private T _selectedItem;
+        private IEnumerable<TViewModel> _items;
+        private TViewModel _selectedItem;
         private SortDirection _direction = SortDirection.None;
-        private Func<T, object> _sortBy = null;
+        private Func<TViewModel, object> _sortBy = null;
         private HashSet<object> _groupExpansions = new HashSet<object>();
-        private List<GroupDefinition<T>> _groups = new List<GroupDefinition<T>>();
-        private PropertyInfo[] _properties = typeof(T).GetProperties();
+        private List<GroupDefinition<TViewModel>> _groups = new List<GroupDefinition<TViewModel>>();
+        private PropertyInfo[] _properties = typeof(TViewModel).GetProperties();
 
         protected string _classname =>
             new CssBuilder("mud-table")
@@ -68,7 +69,7 @@ namespace MudBlazor
             }
         }
 
-        internal readonly List<Column<T>> _columns = new List<Column<T>>();
+        internal readonly List<Column<T, TViewModel>> _columns = new List<Column<T, TViewModel>>();
         internal T _editingItem;
         internal int editingItemHash;
         internal T _previousEditingItem;
@@ -85,7 +86,7 @@ namespace MudBlazor
         #region Notify Children Delegates
 
         internal Action<string> SortChangedEvent { get; set; }
-        internal Action<HashSet<T>> SelectedItemsChangedEvent { get; set; }
+        internal Action<HashSet<IIdentifiable<int>>> SelectedItemsChangedEvent { get; set; }
         internal Action<bool> SelectedAllItemsChangedEvent { get; set; }
         internal Action StartedEditingItemEvent { get; set; }
         internal Action EditingCancelledEvent { get; set; }
@@ -98,17 +99,17 @@ namespace MudBlazor
         /// <summary>
         /// Callback is called when a row has been clicked and returns the selected item.
         /// </summary>
-        [Parameter] public EventCallback<T> SelectedItemChanged { get; set; }
+        [Parameter] public EventCallback<TViewModel> SelectedItemChanged { get; set; }
 
         /// <summary>
         /// Callback is called whenever items are selected or deselected in multi selection mode.
         /// </summary>
-        [Parameter] public EventCallback<HashSet<T>> SelectedItemsChanged { get; set; }
+        [Parameter] public EventCallback<HashSet<IIdentifiable<int>>> SelectedItemsChanged { get; set; }
 
         /// <summary>
         /// Callback is called whenever a row is clicked.
         /// </summary>
-        [Parameter] public EventCallback<DataGridRowClickEventArgs<T>> RowClick { get; set; }
+        [Parameter] public EventCallback<DataGridRowClickEventArgs<TViewModel>> RowClick { get; set; }
 
         /// <summary>
         /// Callback is called when an item has begun to be edited. Returns the item being edited.
@@ -123,7 +124,9 @@ namespace MudBlazor
         /// <summary>
         /// Callback is called when the changes to an item are committed. Returns the item whose changes were committed.
         /// </summary>
-        [Parameter] public EventCallback<T> CommittedItemChanges { get; set; }
+        [Parameter] public EventCallback<int> CommittedItemChanges { get; set; }
+
+        [Parameter] public Func<TViewModel, Task<T>> RetrieveItemAsync { get; set; }
 
         #endregion
 
@@ -218,7 +221,7 @@ namespace MudBlazor
         /// grid automatically when using the built in filter UI. You can also programmatically manage these definitions 
         /// through this collection.
         /// </summary>
-        [Parameter] public List<FilterDefinition<T>> FilterDefinitions { get; set; } = new List<FilterDefinition<T>>();
+        [Parameter] public List<FilterDefinition<TViewModel>> FilterDefinitions { get; set; } = new List<FilterDefinition<TViewModel>>();
 
         /// <summary>
         /// If true, the results are displayed in a Virtualize component, allowing a boost in rendering speed.
@@ -238,12 +241,12 @@ namespace MudBlazor
         /// <summary>
         /// Returns the class that will get joined with RowClass. Takes the current item and row index.
         /// </summary>
-        [Parameter] public Func<T, int, string> RowClassFunc { get; set; }
+        [Parameter] public Func<TViewModel, int, string> RowClassFunc { get; set; }
 
         /// <summary>
         /// Returns the class that will get joined with RowClass. Takes the current item and row index.
         /// </summary>
-        [Parameter] public Func<T, int, string> RowStyleFunc { get; set; }
+        [Parameter] public Func<TViewModel, int, string> RowStyleFunc { get; set; }
 
         /// <summary>
         /// Set to true to enable selection of multiple rows. 
@@ -270,7 +273,7 @@ namespace MudBlazor
         /// </summary>
         /// 
         [Parameter]
-        public IEnumerable<T> Items
+        public IEnumerable<TViewModel> Items
         {
             get => _items;
             set
@@ -327,7 +330,7 @@ namespace MudBlazor
         /// <summary>
         /// A function that returns whether or not an item should be displayed in the table. You can use this to implement your own search function.
         /// </summary>
-        [Parameter] public Func<T, bool> QuickFilter { get; set; } = null;
+        [Parameter] public Func<TViewModel, bool> QuickFilter { get; set; } = null;
 
         /// <summary>
         /// Allows adding a custom header beyond that specified in the Column component. Add HeaderCell 
@@ -343,7 +346,7 @@ namespace MudBlazor
         /// <summary>
         /// Row Child content of the component.
         /// </summary>
-        [Parameter] public RenderFragment<T> ChildRowContent { get; set; }
+        [Parameter] public RenderFragment<TViewModel> ChildRowContent { get; set; }
 
         /// <summary>
         /// Defines the table body content when there are no matching records found
@@ -365,7 +368,7 @@ namespace MudBlazor
         /// Table will await this func and update based on the returned TableData.
         /// Used only with ServerData
         /// </summary>
-        [Parameter] public Func<GridState<T>, Task<GridData<T>>> ServerData { get; set; }
+        [Parameter] public Func<GridState<TViewModel>, Task<GridData<TViewModel>>> ServerData { get; set; }
 
         /// <summary>
         /// If the table has more items than this number, it will break the rows into pages of said size.
@@ -411,15 +414,15 @@ namespace MudBlazor
         /// If MultiSelection is true, this returns the currently selected items. You can bind this property and the initial content of the HashSet you bind it to will cause these rows to be selected initially.
         /// </summary>
         [Parameter]
-        public HashSet<T> SelectedItems
+        public HashSet<IIdentifiable<int>> SelectedItems
         {
             get
             {
                 if (!MultiSelection)
                     if (_selectedItem is null)
-                        return new HashSet<T>(Array.Empty<T>());
+                        return new HashSet<IIdentifiable<int>>(Array.Empty<IIdentifiable<int>>());
                     else
-                        return new HashSet<T>(new T[] { _selectedItem });
+                        return new HashSet<IIdentifiable<int>>(new IIdentifiable<int>[] { _selectedItem });
                 else
                     return Selection;
             }
@@ -431,7 +434,7 @@ namespace MudBlazor
                 {
                     if (Selection.Count == 0)
                         return;
-                    Selection = new HashSet<T>();
+                    Selection = new HashSet<IIdentifiable<int>>();
                 }
                 else
                     Selection = value;
@@ -445,12 +448,12 @@ namespace MudBlazor
         /// Returns the item which was last clicked on in single selection mode (that is, if MultiSelection is false)
         /// </summary>
         [Parameter]
-        public T SelectedItem
+        public TViewModel SelectedItem
         {
             get => _selectedItem;
             set
             {
-                if (EqualityComparer<T>.Default.Equals(SelectedItem, value))
+                if (EqualityComparer<TViewModel>.Default.Equals(SelectedItem, value))
                     return;
                 _selectedItem = value;
                 SelectedItemChanged.InvokeAsync(value);
@@ -499,7 +502,7 @@ namespace MudBlazor
 
         #region Properties
 
-        internal IEnumerable<T> CurrentPageItems
+        internal IEnumerable<TViewModel> CurrentPageItems
         {
             get
             {
@@ -521,10 +524,10 @@ namespace MudBlazor
                 return GetItemsOfPage(CurrentPage, RowsPerPage);
             }
         }
-        public HashSet<T> Selection { get; set; } = new HashSet<T>();
+        public HashSet<IIdentifiable<int>> Selection { get; set; } = new HashSet<IIdentifiable<int>>();
         public bool HasPager { get; set; }
-        GridData<T> _server_data = new GridData<T>() { TotalItems = 0, Items = Array.Empty<T>() };
-        public IEnumerable<T> FilteredItems
+        GridData<TViewModel> _server_data = new GridData<TViewModel>() { TotalItems = 0, Items = Array.Empty<TViewModel>() };
+        public IEnumerable<TViewModel> FilteredItems
         {
             get
             {
@@ -549,7 +552,7 @@ namespace MudBlazor
             }
         }
         public Interfaces.IForm Validator { get; set; } = new DataGridRowValidator();
-        internal Column<T> GroupedColumn
+        internal Column<T, TViewModel> GroupedColumn
         {
             get
             {
@@ -589,10 +592,10 @@ namespace MudBlazor
 
         #region Methods
 
-        protected IEnumerable<T> GetItemsOfPage(int n, int pageSize)
+        protected IEnumerable<TViewModel> GetItemsOfPage(int n, int pageSize)
         {
             if (n < 0 || pageSize <= 0)
-                return Array.Empty<T>();
+                return Array.Empty<TViewModel>();
 
             if (ServerData != null)
                 return _server_data.Items;
@@ -609,7 +612,7 @@ namespace MudBlazor
             StateHasChanged();
             //var label = CurrentSortLabel;
 
-            var state = new GridState<T>
+            var state = new GridState<TViewModel>
             {
                 Page = CurrentPage,
                 PageSize = RowsPerPage,
@@ -627,7 +630,7 @@ namespace MudBlazor
             PagerStateHasChangedEvent?.Invoke();
         }
 
-        internal void AddColumn(Column<T> column)
+        internal void AddColumn(Column<T, TViewModel> column)
         {
             if (column.Tag?.ToString() == "select-column")
                 _columns.Insert(0, column);
@@ -640,7 +643,7 @@ namespace MudBlazor
         /// </summary>
         internal void AddFilter()
         {
-            FilterDefinitions.Add(new FilterDefinition<T>
+            FilterDefinitions.Add(new FilterDefinition<TViewModel>
             {
                 Id = Guid.NewGuid(),
                 Field = _columns?.FirstOrDefault().Field,
@@ -651,7 +654,7 @@ namespace MudBlazor
 
         internal void AddFilter(Guid id, string field)
         {
-            FilterDefinitions.Add(new FilterDefinition<T>
+            FilterDefinitions.Add(new FilterDefinition<TViewModel>
             {
                 Id = id,
                 Field = field,
@@ -666,7 +669,7 @@ namespace MudBlazor
             GroupItems();
         }
 
-        internal async Task SetSelectedItemAsync(bool value, T item)
+        internal async Task SetSelectedItemAsync(bool value, IIdentifiable<int> item)
         {
             if (value)
                 Selection.Add(item);
@@ -681,7 +684,7 @@ namespace MudBlazor
         internal async Task SetSelectAllAsync(bool value)
         {
             if (value)
-                Selection = new HashSet<T>(Items);
+                Selection = new HashSet<IIdentifiable<int>>(Items.OfType<IIdentifiable<int>>());
             else
                 Selection.Clear();
 
@@ -691,7 +694,7 @@ namespace MudBlazor
             StateHasChanged();
         }
 
-        internal IEnumerable<T> Sort(IEnumerable<T> items)
+        internal IEnumerable<TViewModel> Sort(IEnumerable<TViewModel> items)
         {
             if (Items == null)
                 return items;
@@ -716,15 +719,15 @@ namespace MudBlazor
         /// </summary>
         /// <param name="item"></param>
         /// <returns></returns>
-        internal async Task CommitItemChangesAsync(T item)
+        internal async Task CommitItemChangesAsync(TViewModel item)
         {
             // Here, we need to validate at the cellular level...
-            await CommittedItemChanges.InvokeAsync(item);
+            await CommittedItemChanges.InvokeAsync(item.Id);
         }
 
         /// <summary>
         /// This method notifies the consumer that changes to the data have been committed
-        /// and what those changes are. This variation of the method is used when the EditMode 
+        /// and what those changes are. This variation of the method is used when the EditMode
         /// is anything but Cell since the _editingItem is used.
         /// </summary>
         /// <returns></returns>
@@ -742,15 +745,15 @@ namespace MudBlazor
 
                 Console.WriteLine(JsonSerializer.Serialize(found));
 
-                await CommittedItemChanges.InvokeAsync(found);
+                await CommittedItemChanges.InvokeAsync(found.Id);
                 ClearEditingItem();
                 isEditFormOpen = false;
             }
         }
 
-        internal async Task OnRowClickedAsync(MouseEventArgs args, T item, int rowIndex)
+        internal async Task OnRowClickedAsync(MouseEventArgs args, TViewModel item, int rowIndex)
         {
-            await RowClick.InvokeAsync(new DataGridRowClickEventArgs<T>
+            await RowClick.InvokeAsync(new DataGridRowClickEventArgs<TViewModel>
             {
                 MouseEventArgs = args,
                 Item = item,
@@ -823,7 +826,7 @@ namespace MudBlazor
         /// <param name="sortBy"></param>
         /// <param name="field"></param>
         /// <returns></returns>
-        public async Task SetSortAsync(SortDirection direction, Func<T, object> sortBy, string field)
+        public async Task SetSortAsync(SortDirection direction, Func<TViewModel, object> sortBy, string field)
         {
             _direction = direction;
             _sortBy = sortBy;
@@ -837,7 +840,7 @@ namespace MudBlazor
         /// </summary>
         /// <param name="item"></param>
         /// <returns></returns>
-        public async Task SetSelectedItemAsync(T item)
+        public async Task SetSelectedItemAsync(TViewModel item)
         {
             if (MultiSelection)
             {
@@ -862,6 +865,19 @@ namespace MudBlazor
         /// </summary>
         /// <param name="item"></param>
         /// <returns></returns>
+        public async Task SetEditingItemAsync(TViewModel item)
+        {
+            if (ReadOnly) return;
+
+            editingItemHash = item.GetHashCode();
+            EditingCancelledEvent?.Invoke();
+            _previousEditingItem = _editingItem;
+            _editingItem = await RetrieveItemAsync(item); //JsonSerializer.Deserialize<TViewModel>(JsonSerializer.Serialize(item));
+            StartedEditingItemEvent?.Invoke();
+            await StartedEditingItem.InvokeAsync(_editingItem);
+            isEditFormOpen = true;
+        }
+
         public async Task SetEditingItemAsync(T item)
         {
             if (ReadOnly) return;
@@ -869,7 +885,7 @@ namespace MudBlazor
             editingItemHash = item.GetHashCode();
             EditingCancelledEvent?.Invoke();
             _previousEditingItem = _editingItem;
-            _editingItem = JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(item));
+            _editingItem = item; //JsonSerializer.Deserialize<TViewModel>(JsonSerializer.Serialize(item));
             StartedEditingItemEvent?.Invoke();
             await StartedEditingItem.InvokeAsync(_editingItem);
             isEditFormOpen = true;
@@ -955,11 +971,11 @@ namespace MudBlazor
         {
             if (GroupedColumn == null)
             {
-                _groups = new List<GroupDefinition<T>>();
+                _groups = new List<GroupDefinition<TViewModel>>();
                 StateHasChanged();
                 return;
             }
-            
+
             var groupings = CurrentPageItems.GroupBy(GroupedColumn.groupBy);
 
             if (_groupExpansions.Count == 0)
@@ -977,13 +993,13 @@ namespace MudBlazor
             }
 
             // construct the groups
-            _groups = groupings.Select(x => new GroupDefinition<T>(x,
+            _groups = groupings.Select(x => new GroupDefinition<TViewModel>(x,
                 _groupExpansions.Contains(x.Key))).ToList();
 
             StateHasChanged();
         }
 
-        internal void ChangedGrouping(Column<T> column)
+        internal void ChangedGrouping(Column<T, TViewModel> column)
         {
             foreach (var c in _columns)
             {
@@ -994,7 +1010,7 @@ namespace MudBlazor
             GroupItems();       
         }
 
-        internal void ToggleGroupExpansion(GroupDefinition<T> g)
+        internal void ToggleGroupExpansion(GroupDefinition<TViewModel> g)
         {
             if (_groupExpansions.Contains(g.Grouping.Key))
             {

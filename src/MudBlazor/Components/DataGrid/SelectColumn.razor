@@ -1,8 +1,9 @@
 ﻿@namespace MudBlazor
 @inherits MudComponentBase
-@typeparam T
+@typeparam T where T : Common.Types.IIdentifiable<int>
+@typeparam TViewModel where TViewModel : Common.Types.IIdentifiable<int>
 
-<Column T="T" Tag="@("select-column")" Sortable="false" ShowColumnOptions="false" HeaderStyle="width:0%">
+<Column T="TViewModel" TViewModel = "TViewModel" Tag="@("select-column")" Sortable="false" ShowColumnOptions="false" HeaderStyle="width:0%">
     <HeaderTemplate>
         @if (ShowInHeader)
         {

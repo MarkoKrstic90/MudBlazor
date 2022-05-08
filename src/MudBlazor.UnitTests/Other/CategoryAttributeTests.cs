@@ -31,17 +31,17 @@ namespace MudBlazor.UnitTests.Other
             // Currently, these classes inheriting from MudComponentBase have uncategorized properties.
             // If you want you can categorize them, and then remove from this list.
             Type[] exceptions = {
-                typeof(MudDataGrid<>),  // TODO: remove it later
-                typeof(Column<>),
+                typeof(MudDataGrid<,>),  // TODO: remove it later
+                typeof(Column<,>),
                 typeof(Row),
-                typeof(HeaderCell<>),
-                typeof(FooterCell<>),
-                typeof(Cell<>),
-                typeof(HeaderContext<>),
-                typeof(FooterContext<>),
+                typeof(HeaderCell<,>),
+                typeof(FooterCell<,>),
+                typeof(Cell<,>),
+                typeof(HeaderContext<,>),
+                typeof(FooterContext<,>),
                 typeof(CellContext<>),
-                typeof(MudDataGridPager<>),
-                typeof(SelectColumn<>),
+                typeof(MudDataGridPager<,>),
+                typeof(SelectColumn<,>),
 
                 typeof(MudTHeadRow),
                 typeof(MudTFootRow),

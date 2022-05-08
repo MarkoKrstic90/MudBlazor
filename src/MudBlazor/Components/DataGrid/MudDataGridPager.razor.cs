@@ -4,14 +4,15 @@
 
 using System;
 using System.Threading.Tasks;
+using Common.Types;
 using Microsoft.AspNetCore.Components;
 using MudBlazor.Utilities;
 
 namespace MudBlazor
 {
-    public partial class MudDataGridPager<T> : MudComponentBase, IDisposable
+    public partial class MudDataGridPager<T, TViewModel> : MudComponentBase, IDisposable where T : IIdentifiable<int> where TViewModel : IIdentifiable<int>
     {
-        [CascadingParameter] public MudDataGrid<T> DataGrid { get; set; }
+        [CascadingParameter] public MudDataGrid<T, TViewModel> DataGrid { get; set; }
 
         /// <summary>
         /// Set true to hide the part of the pager which allows to change the page size.

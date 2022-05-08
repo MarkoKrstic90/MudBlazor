@@ -4,12 +4,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Common.Types;
 
 namespace MudBlazor
 {
-    public class CellContext<T>
+    public class CellContext<T> where T : IIdentifiable<int>
     {
-        internal HashSet<T> selection;
+        internal HashSet<IIdentifiable<int>> selection;
 
         public T Item { get; set; }
         public CellActions Actions { get; internal set; }
@@ -19,7 +21,7 @@ namespace MudBlazor
             {
                 if (selection != null)
                 {
-                    return selection.Contains(Item);
+                    return selection.Any(s => s.Id == Item.Id);
                 }
 
                 return false;
